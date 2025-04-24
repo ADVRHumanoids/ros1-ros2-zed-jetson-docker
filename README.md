@@ -22,7 +22,7 @@ Before running the containers, you need to allow the containers to access your h
 export DISPLAY=:0
 # Allow local root user to access the X server
 # Note: The exact path to Xauthority might differ based on your display manager (GDM, LightDM, etc.)
-# try `ls -l ~/.Xauthority` first or `ls -l /run/user/$(id -u)/gdm/Xauthority`.
+# try `ls -l ~/.Xauthority` first or `ls -l /run/user/$(id -u)/gdm/Xauthority`to obtain XAUTH_PATH.
 sudo env XAUTHORITY=$XAUTH_PATH xhost +si:localuser:root
 ```
 
