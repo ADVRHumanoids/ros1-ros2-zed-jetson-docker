@@ -1,0 +1,47 @@
+services:
+  zed_ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        L4T_VERSION: l4t-r36.4.0
+        ZED_SDK_MAJOR: 5
+        ZED_SDK_MINOR: 0
+        ZED_SDK_PATCH: 0
+        L4T_MAJOR: 36
+        L4T_MINOR: 4
+        L4T_PATCH: 0
+    image: zed_ros2_jetson_orin
+    container_name: zed_ros2_container
+    privileged: true
+    network_mode: host
+    ipc: host
+    pid: host
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_X11_NO_MITSHM=1 # Often helpful for stability with Docker X11
+      - XAUTHORITY=/root/.Xauthority # Optional, but recommended with .Xauthority mount
+    volumes:
+      # X11 Forwarding Volumes
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw #line for the socket
+      - ~/.Xauthority:/root/.Xauthority:rw
+      # Other necessary volumes
+      - /tmp:/tmp
+      - /dev:/dev
+      - /var/nvidia/nvcam/settings/:/var/nvidia/nvcam/settings/
+      - /etc/systemd/system/zed_x_daemon.service:/etc/systemd/system/zed_x_daemon.service
+      - /dev/shm:/dev/shm
+      # Mount ZED resources from host (read-only recommended)
+      #- /usr/local/zed/resources:/usr/local/zed/resources:ro
+      # Mount ZED settings from host (read-write needed)
+      #- /usr/local/zed/settings:/usr/local/zed/settings:rw
+    command: tail -f /dev/null
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
