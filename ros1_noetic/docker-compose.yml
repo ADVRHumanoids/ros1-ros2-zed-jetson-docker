@@ -1,0 +1,33 @@
+services:
+  zed-ros-noetic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zed-ros-noetic
+    runtime: nvidia
+    privileged: true      # Keep
+    network_mode: host    # Keep
+    ipc: host             # ADDED
+    # pid: host           # Optional: Add if ipc:host alone isn't enough, usually not needed
+    environment:
+      - DISPLAY=${DISPLAY}
+      - NVIDIA_VISIBLE_DEVICES=all # Keep (or change to match ROS 2 if preferred)
+      - NVIDIA_DRIVER_CAPABILITIES=all # Keep
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      # X11
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${HOME}/.Xauthority:/root/.Xauthority
+      # Devices & System IPC/Settings
+      - /dev:/dev
+      - /dev/shm:/dev/shm                     # ADDED
+      - /tmp:/tmp                           # ADDED
+      - /var/nvidia/nvcam/settings/:/var/nvidia/nvcam/settings/ # ADDED
+      # ZED SDK Files (Ensure these paths exist on your HOST Jetson)
+      #- /usr/local/zed/resources:/usr/local/zed/resources:ro # ADDED (Recommended)
+      #- /usr/local/zed/settings:/usr/local/zed/settings:rw   # ADDED (Important)
+      # Your Workspace Mount (If needed)
+      - ./ros_ws:/root/shared_ws
+    stdin_open: true      # Keep for interactivity
+    tty: true             # Keep for interactivity
+    command: tail -f /dev/null
