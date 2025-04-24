@@ -39,7 +39,7 @@ Open a terminal *on your host machine* and run:
 cd /path/to/your/repo/ros2_humble
 
 # Clone the repository into zed_components
-git clone [https://github.com/stereolabs/zed-ros2-wrapper.git](https://github.com/stereolabs/zed-ros2-wrapper.git) ./zed_components
+git clone https://github.com/stereolabs/zed-ros2-wrapper.git ./zed_components
 
 # Now proceed with the build step below
 ```
