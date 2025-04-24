@@ -51,8 +51,6 @@ git clone [https://github.com/stereolabs/zed-ros2-wrapper.git](https://github.co
     ```bash
     docker compose build
     ```
-    *(This might take some time, especially the first time or after updating the wrapper)*
-
 2.  **Run the Docker container in detached mode:**
     ```bash
     docker compose up -d
@@ -99,4 +97,3 @@ You should now see the ZED node starting up and publishing topics. You can use t
 * **Container Names:** The default container names are `zed-ros-noetic` for ROS1 and `zed_ros2_container` for ROS2. These are defined in the respective `docker-compose.yml` files.
 * **Volumes:** The compose files mount necessary `/dev` nodes and directories for device access and X11 forwarding. Additional volumes for ZED SDK settings or resources might be needed depending on your setup (refer to the Stereolabs Docker documentation).
 * **JetPack/L4T Version:** The ROS2 container is configured for L4T r36.4.0 (JetPack 6.0 DP). If you are using a different version, you might need to adjust the `L4T_VERSION` build argument in `ros2_humble/docker-compose.yml` and potentially the base image in the Dockerfile.
-```
