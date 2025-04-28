@@ -26,6 +26,8 @@ services:
       # ZED SDK Files (Ensure these paths exist on your HOST Jetson)
       #- /usr/local/zed/resources:/usr/local/zed/resources:ro # ADDED (Recommended)
       #- /usr/local/zed/settings:/usr/local/zed/settings:rw   # ADDED (Important)
+      - /home/kyon/zed_docker_data/ros1_noetic/resources:/usr/local/zed/resources:rw # <-- POINT TO NEW HOST PATH
+      - /home/kyon/zed_docker_data/ros1_noetic/settings:/usr/local/zed/settings:rw   # <-- POINT TO NEW HOST PATH
       # Your Workspace Mount (If needed)
       - ./ros_ws:/root/shared_ws
     stdin_open: true      # Keep for interactivity
