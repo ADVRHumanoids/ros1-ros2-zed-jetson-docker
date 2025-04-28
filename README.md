@@ -23,6 +23,7 @@ export DISPLAY=:0
 # Allow local root user to access the X server
 # Note: The exact path to Xauthority might differ based on your display manager (GDM, LightDM, etc.)
 # try `ls -l ~/.Xauthority` first or `ls -l /run/user/$(id -u)/gdm/Xauthority`to obtain XAUTH_PATH.
+# for kyon is sudo env XAUTHORITY=/run/user/128/gdm/Xauthority xhost +si:localuser:root
 sudo env XAUTHORITY=$XAUTH_PATH xhost +si:localuser:root
 ```
 
