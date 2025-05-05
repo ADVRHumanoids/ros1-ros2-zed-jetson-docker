@@ -92,6 +92,18 @@ Inside the container's terminal:
    ```
 
 You should now see the ZED node starting up and publishing topics. You can use tools like `rostopic list` (ROS1) or `ros2 topic list` (ROS2) to see the available camera topics.
+# Cross-Compilation
+
+# You already ran this, just confirming it's needed
+sudo apt-get update
+sudo apt-get install qemu-user-static
+docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+docker buildx create --bootstrap --name mybuilder --driver docker-container --use
+
+docker buildx build --builder mybuilder --platform \
+    --tag your-dockerhub-username/zed-ros-noetic:jetson-jp6 \
+    --output type=docker \
+    .
 
 ## Notes
 
