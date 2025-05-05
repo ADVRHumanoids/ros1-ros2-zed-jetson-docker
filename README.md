@@ -100,11 +100,12 @@ sudo apt-get update
 sudo apt-get install qemu-user-static
 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 docker buildx create --bootstrap --name mybuilder --driver docker-container --use
-
-docker buildx build --builder mybuilder --platform \
-    --tag your-dockerhub-username/zed-ros-noetic:jetson-jp6 \
-    --output type=docker \
-    .
+docker buildx build \
+  --builder mybuilder \
+  --platform linux/arm64 \
+  --tag local/zed-ros-noetic-orin:latest \
+  --output type=docker \
+  .
 ```
 ## Notes
 
