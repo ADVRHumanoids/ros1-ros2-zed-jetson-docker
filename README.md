@@ -95,6 +95,7 @@ You should now see the ZED node starting up and publishing topics. You can use t
 # Cross-Compilation
 
 # You already ran this, just confirming it's needed
+```bash
 sudo apt-get update
 sudo apt-get install qemu-user-static
 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
@@ -104,7 +105,7 @@ docker buildx build --builder mybuilder --platform \
     --tag your-dockerhub-username/zed-ros-noetic:jetson-jp6 \
     --output type=docker \
     .
-
+```
 ## Notes
 
 * **Container Names:** The default container names are `zed-ros-noetic` for ROS1 and `zed_ros2_container` for ROS2. These are defined in the respective `docker-compose.yml` files.
