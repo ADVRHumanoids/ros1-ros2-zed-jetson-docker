@@ -48,9 +48,9 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 42D5A192B819C5DA ||
 
 ENV TZ=Europe/Paris
 
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \ 
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
   apt-get update && \
-  apt-get install --yes lsb-release wget less udev sudo build-essential cmake python3 python3-dev python3-pip python3-wheel git jq libpq-dev zstd usbutils && \    
+  apt-get install --yes lsb-release wget less udev sudo build-essential cmake python3 python3-dev python3-pip python3-wheel git jq libpq-dev zstd usbutils && \
   rm -rf /var/lib/apt/lists/*
 
   # --- Add ROS 2 Apt Repository (Needed for rosdep / build dependencies) --- ### MOVED & KEPT ###
@@ -73,7 +73,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN echo "# R${L4T_MAJOR} (release), REVISION: ${L4T_MINOR}.${L4T_PATCH}" > /etc/nv_tegra_release && \
   apt-get update -y || true && \
   apt-get install -y --no-install-recommends zstd wget less cmake curl gnupg2 \
-  build-essential python3 python3-pip python3-dev python3-setuptools libusb-1.0-0-dev \ 
+  build-essential python3 python3-pip python3-dev python3-setuptools libusb-1.0-0-dev \
   libgeographic-dev libdraco-dev zlib1g-dev -y && \
   pip install protobuf && \
   wget -q --no-check-certificate -O ZED_SDK_Linux_JP.run \
@@ -86,13 +86,10 @@ RUN echo "# R${L4T_MAJOR} (release), REVISION: ${L4T_MINOR}.${L4T_PATCH}" > /etc
 # Install the ZED ROS2 Wrapper
 ENV ROS_DISTRO=${ROS2_DIST}
 
-# Copy the sources in the Docker image
+# Clone ZED ROS2 Wrapper and install other dependencies from source
 WORKDIR /root/ros2_ws/src
-COPY zed_components/ ./
-
-# Install missing dependencies from the sources
-WORKDIR /root/ros2_ws/src
-RUN wget https://github.com/ros/xacro/archive/refs/tags/${XACRO_VERSION}.tar.gz -O - | tar -xvz && mv xacro-${XACRO_VERSION} xacro && \
+RUN git clone https://github.com/stereolabs/zed-ros2-wrapper.git && \
+    wget https://github.com/ros/xacro/archive/refs/tags/${XACRO_VERSION}.tar.gz -O - | tar -xvz && mv xacro-${XACRO_VERSION} xacro && \
     wget https://github.com/ros/diagnostics/archive/refs/tags/${DIAGNOSTICS_VERSION}.tar.gz -O - | tar -xvz && mv diagnostics-${DIAGNOSTICS_VERSION} diagnostics && \
     wget https://github.com/ament/ament_lint/archive/refs/tags/${AMENT_LINT_VERSION}.tar.gz -O - | tar -xvz && mv ament_lint-${AMENT_LINT_VERSION} ament-lint && \
     wget https://github.com/cra-ros-pkg/robot_localization/archive/refs/tags/${ROBOT_LOCALIZATION_VERSION}.tar.gz -O - | tar -xvz && mv robot_localization-${ROBOT_LOCALIZATION_VERSION} robot-localization && \
@@ -111,16 +108,17 @@ RUN wget https://github.com/ros/xacro/archive/refs/tags/${XACRO_VERSION}.tar.gz 
     # ### ADDED vision_opencv and image_transport_plugins source ###
     git clone --branch ${ROS_DISTRO} https://github.com/ros-perception/vision_opencv.git && \
     git clone --branch ${ROS_DISTRO} https://github.com/ros-perception/image_transport_plugins.git && \
-    git clone --branch ${ROS_DISTRO} https://github.com/ros-misc-utilities/ffmpeg_image_transport.git && \
+    git clone https://github.com/ros-misc-utilities/ffmpeg_image_transport.git && \
+    git clone https://github.com/ros-misc-utilities/ffmpeg_encoder_decoder.git && \
     git clone --branch ${ROS_DISTRO} https://github.com/ros-misc-utilities/ffmpeg_image_transport_msgs.git
-    
-    
+
 # Install cython
 RUN python3 -m pip install --upgrade cython
 
 # Build the dependencies and the ZED ROS2 Wrapper
 WORKDIR /root/ros2_ws
-RUN rosdep install --from-paths src --ignore-src -y --rosdistro ${ROS_DISTRO} || true
+RUN apt-get update && apt-get install -y libxcb-cursor0 && rm -rf /var/lib/apt/lists/* && \
+    rosdep install --from-paths src --ignore-src -y --rosdistro ${ROS_DISTRO} || true
 
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/install/setup.bash && \
   colcon build --parallel-workers $(nproc) --symlink-install \
@@ -136,7 +134,7 @@ WORKDIR /root/ros2_ws
 RUN echo 'source /opt/ros/$ROS_DISTRO/install/setup.bash' >> /root/.bashrc && \
   echo 'source /root/ros2_ws/install/local_setup.bash' >> /root/.bashrc
 
-  
+
 # Copy the entrypoint script
 COPY ros_entrypoint.sh /sbin/ros_entrypoint.sh
 RUN sudo chmod 755 /sbin/ros_entrypoint.sh
