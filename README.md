@@ -104,7 +104,7 @@ docker buildx build \
   --builder mybuilder \
   --platform linux/arm64 \
   --tag local/zed-ros-noetic-orin:latest \
-  --output type=docker \
+  --load \
   .
 ```
 ## Notes
