@@ -3,11 +3,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
       args:
         L4T_VERSION: l4t-r36.4.0
         ZED_SDK_MAJOR: 5
         ZED_SDK_MINOR: 0
-        ZED_SDK_PATCH: 0
+        ZED_SDK_PATCH: 5
         L4T_MAJOR: 36
         L4T_MINOR: 4
         L4T_PATCH: 0
