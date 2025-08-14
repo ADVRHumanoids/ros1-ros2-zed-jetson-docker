@@ -63,16 +63,25 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &
   rm -rf /var/lib/apt/lists/*
 
 # --- Install Build Dependencies (Excluding conflicting OpenCV dev packages) --- ### NEW BLOCK ###
+# Install all theora and video codec dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
   python3-numpy \
   python3-dev \
   libboost-python-dev \
+  # Theora video codec dependencies
   libtheora-dev \
+  libogg-dev \
+  libvorbis-dev \
+  # Additional multimedia libraries that theora might need
+  libgstreamer1.0-dev \
+  libgstreamer-plugins-base1.0-dev \
+  # Standard image libraries
   libzstd-dev \
   libpng-dev \
   libjpeg-dev \
-  # Add any other non-OpenCV build deps needed by vision_opencv/image_transport_plugins if build fails later
+  libturbojpeg0-dev \
   && rm -rf /var/lib/apt/lists/*
+
 
   RUN echo "# R${L4T_MAJOR} (release), REVISION: ${L4T_MINOR}.${L4T_PATCH}" > /etc/nv_tegra_release && \
   apt-get update -y && \
@@ -111,11 +120,14 @@ RUN git clone https://github.com/stereolabs/zed-ros2-wrapper.git && \
     rm -rf cob_common && \
     # ### ADDED vision_opencv and image_transport_plugins source ###
     git clone --branch ${ROS_DISTRO} https://github.com/ros-perception/vision_opencv.git && \
-    git clone --branch ${ROS_DISTRO} https://github.com/ros-perception/image_transport_plugins.git && \
     git clone https://github.com/ros-misc-utilities/ffmpeg_image_transport.git && \
     git clone https://github.com/ros-misc-utilities/ffmpeg_encoder_decoder.git && \
-    git clone --branch ${ROS_DISTRO} https://github.com/ros-misc-utilities/ffmpeg_image_transport_msgs.git && \
-    git clone https://github.com/botsandus/ament_black.git
+    git clone --branch ${ROS_DISTRO} https://github.com/ros-misc-utilities/ffmpeg_image_transport_msgs.git
+# Get only the theora plugin from image_transport_plugins (avoid OpenCV-dev deps)
+RUN git clone --branch ${ROS_DISTRO} https://github.com/ros-perception/image_transport_plugins.git && \
+    rm -rf image_transport_plugins/compressed_image_transport \
+           image_transport_plugins/compressed_depth_image_transport \
+           image_transport_plugins/image_transport_plugins  # metapackage
 
 # Install cython
 RUN python3 -m pip install --upgrade cython
@@ -124,13 +136,6 @@ RUN python3 -m pip install --no-cache-dir --index-url https://pypi.org/simple bl
 # Build the dependencies and the ZED ROS2 Wrapper
 WORKDIR /root/ros2_ws
 # CMake should find the preinstalled OpenCV under /usr/local
-ENV OpenCV_DIR=/usr/local/lib/cmake/opencv4
-ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}
-
-# Skip OpenCV-related rosdep keys that map to Ubuntu libopencv-* packages
-# Make sure CMake/pkg-config find Jetson's OpenCV (under /usr/local)
-ENV OpenCV_DIR=/usr/local/lib/cmake/opencv4
-ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}
 
 # List of rosdep keys that map to Ubuntu libopencv-* packages
 ARG OPENCV_SKIP="opencv opencv2 OpenCV \
@@ -138,14 +143,9 @@ ARG OPENCV_SKIP="opencv opencv2 OpenCV \
   libopencv-highgui-dev libopencv-imgcodecs-dev \
   libopencv-video-dev libopencv-calib3d-dev libopencv-features2d-dev"
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends libxcb-cursor0 \
- && rosdep update \
- && rosdep install --from-paths src --ignore-src -y \
-      --rosdistro ${ROS_DISTRO} \
-      --skip-keys "${OPENCV_SKIP}" \
- && rm -rf /var/lib/apt/lists/*
-
+  # Add the meta-package and OpenCV-heavy plugins to the skip list
+ARG EXTRA_SKIP="image_transport_plugins compressed_image_transport compressed_depth_image_transport"
+ 
     # FFmpeg dev (for ffmpeg_image_transport)
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ffmpeg \
@@ -159,20 +159,67 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libdw-dev binutils-dev \
  && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libxcb-cursor0 \
+ && rosdep update \
+ && rosdep install --from-paths src --ignore-src -y \
+      --rosdistro ${ROS_DISTRO} \
+      --skip-keys "${OPENCV_SKIP} ${EXTRA_SKIP}" \
+ && rm -rf /var/lib/apt/lists/*
 # Build the ZED ROS2 Wrapper and its dependencies
-RUN /bin/bash -lc "\
-  source /opt/ros/$ROS_DISTRO/setup.bash && \
-  source /opt/ros/$ROS_DISTRO/install/setup.bash || true && \
-  export CMAKE_PREFIX_PATH=/opt/ros/$ROS_DISTRO:\$CMAKE_PREFIX_PATH && \
-  export AMENT_PREFIX_PATH=/opt/ros/$ROS_DISTRO:\$AMENT_PREFIX_PATH && \
-  colcon build --parallel-workers $(nproc) --symlink-install \
-    --event-handlers console_direct+ --base-paths src \
-    --cmake-args ' -DCMAKE_BUILD_TYPE=Release' \
-                 ' -DBUILD_TESTING=OFF' \
-                 ' -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs' \
-                 ' -DCMAKE_CXX_FLAGS=\"-Wl,--allow-shlib-undefined\"' \
-                 ' --no-warn-unused-cli' \
-"
+# Build theora plugin by itself (no tests)
+# Build theora plugin by itself (super verbose, log to file)
+# Build theora plugin by itself (super verbose, no tests)
+# Stage 1: Build all message packages
+WORKDIR /root/ros2_ws
+
+# Optional: skip some heavy/optional plugins here
+ARG SKIP_PKGS="compressed_image_transport compressed_depth_image_transport image_transport_plugins ament_black ament_cmake_black"
+
+# A) Build everything needed up to the image & point cloud transports you care about
+#    (this ensures rosidl *typesupport* is generated before dependents compile)
+RUN bash -lc '\
+  source /opt/ros/$ROS_DISTRO/setup.bash; \
+  colcon build \
+    --symlink-install \
+    --parallel-workers $(nproc) \
+    --event-handlers console_direct+ \
+    --packages-up-to \
+      zed_wrapper \
+      draco_point_cloud_transport \
+      zstd_point_cloud_transport \
+      zlib_point_cloud_transport \
+      theora_image_transport \
+      ffmpeg_image_transport \
+      ffmpeg_encoder_decoder \
+      point_cloud_transport \
+      zed_msgs \
+      point_cloud_interfaces \
+      geographic_msgs \
+      nmea_msgs \
+    --packages-skip ${SKIP_PKGS} \
+    --cmake-args \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_TESTING=OFF \
+      -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs \
+      -DCMAKE_CXX_FLAGS="-Wl,--allow-shlib-undefined" \
+      -DCMAKE_VERBOSE_MAKEFILE=ON \
+'
+RUN bash -lc '\
+  source /opt/ros/$ROS_DISTRO/setup.bash; \
+  source /root/ros2_ws/install/setup.bash; \
+  colcon build \
+    --symlink-install \
+    --parallel-workers $(nproc) \
+    --event-handlers console_direct+ \
+    --packages-skip ${SKIP_PKGS} \
+    --cmake-args \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_TESTING=OFF \
+      -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs \
+      -DCMAKE_CXX_FLAGS="-Wl,--allow-shlib-undefined" \
+'
+
 WORKDIR /root/ros2_ws
 
 # Add sourcing to .bashrc
