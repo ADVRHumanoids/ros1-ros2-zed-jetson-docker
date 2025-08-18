@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
     container_name: zed-ros-noetic
     runtime: nvidia
     privileged: true      # Keep
