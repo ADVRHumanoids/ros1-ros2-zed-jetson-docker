@@ -166,11 +166,8 @@ RUN apt-get update \
       --rosdistro ${ROS_DISTRO} \
       --skip-keys "${OPENCV_SKIP} ${EXTRA_SKIP}" \
  && rm -rf /var/lib/apt/lists/*
-# Build the ZED ROS2 Wrapper and its dependencies
-# Build theora plugin by itself (no tests)
-# Build theora plugin by itself (super verbose, log to file)
-# Build theora plugin by itself (super verbose, no tests)
-# Stage 1: Build all message packages
+
+ # Stage 1: Build all message packages
 WORKDIR /root/ros2_ws
 
 # Optional: skip some heavy/optional plugins here
@@ -184,19 +181,6 @@ RUN bash -lc '\
     --symlink-install \
     --parallel-workers $(nproc) \
     --event-handlers console_direct+ \
-    --packages-up-to \
-      zed_wrapper \
-      draco_point_cloud_transport \
-      zstd_point_cloud_transport \
-      zlib_point_cloud_transport \
-      theora_image_transport \
-      ffmpeg_image_transport \
-      ffmpeg_encoder_decoder \
-      point_cloud_transport \
-      zed_msgs \
-      point_cloud_interfaces \
-      geographic_msgs \
-      nmea_msgs \
     --packages-skip ${SKIP_PKGS} \
     --cmake-args \
       -DCMAKE_BUILD_TYPE=Release \
