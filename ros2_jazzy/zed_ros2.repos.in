@@ -1,0 +1,85 @@
+repositories:
+  zed-ros2-wrapper:
+    type: git
+    url: https://github.com/stereolabs/zed-ros2-wrapper.git
+    version: ${ZED_WRAPPER_VERSION}
+
+  # Interfaces & common msgs
+  zed-ros2-interfaces:
+    type: git
+    url: https://github.com/stereolabs/zed-ros2-interfaces.git
+    version: ${ZED_MSGS_VERSION}
+  nmea_msgs:
+    type: git
+    url: https://github.com/ros-drivers/nmea_msgs.git
+    version: ${NMEA_MSGS_VERSION}
+  geographic_info:
+    type: git
+    url: https://github.com/ros-geographic-info/geographic_info.git
+    version: ${GEOGRAPHIC_INFO_VERSION}
+  cob_common:
+    type: git
+    url: https://github.com/4am-robotics/cob_common.git
+    version: ${COB_VERSION}
+
+  # Core deps pinned by tag
+  xacro:
+    type: git
+    url: https://github.com/ros/xacro.git
+    version: ${XACRO_VERSION}
+  diagnostics:
+    type: git
+    url: https://github.com/ros/diagnostics.git
+    version: ${DIAGNOSTICS_VERSION}
+  ament_lint:
+    type: git
+    url: https://github.com/ament/ament_lint.git
+    version: ${AMENT_LINT_VERSION}
+  robot_localization:
+    type: git
+    url: https://github.com/cra-ros-pkg/robot_localization.git
+    version: ${ROBOT_LOCALIZATION_VERSION}
+  angles:
+    type: git
+    url: https://github.com/ros/angles.git
+    version: ${ANGLES_VERSION}
+
+  # Perception & transports.
+  # vision_opencv has no jazzy branch (humble -> iron -> rolling), so it is
+  # pinned to the tag released into Jazzy rather than to ${ROS_DISTRO}.
+  vision_opencv:
+    type: git
+    url: https://github.com/ros-perception/vision_opencv.git
+    version: ${VISION_OPENCV_VERSION}
+  point_cloud_transport:
+    type: git
+    url: https://github.com/ros-perception/point_cloud_transport.git
+    version: ${POINTCLOUD_TRANSPORT_VERSION}
+  point_cloud_transport_plugins:
+    type: git
+    url: https://github.com/ros-perception/point_cloud_transport_plugins.git
+    version: ${POINTCLOUD_TRANSPORT_PLUGINS_VERSION}
+  image_transport_plugins:
+    type: git
+    url: https://github.com/ros-perception/image_transport_plugins.git
+    version: ${IMAGE_TRANSPORT_PLUGINS_VERSION}
+
+  # FFmpeg transport stack. ffmpeg_image_transport_msgs also has no jazzy branch.
+  ffmpeg_image_transport:
+    type: git
+    url: https://github.com/ros-misc-utilities/ffmpeg_image_transport.git
+    version: master
+  ffmpeg_encoder_decoder:
+    type: git
+    url: https://github.com/ros-misc-utilities/ffmpeg_encoder_decoder.git
+    version: master
+  ffmpeg_image_transport_msgs:
+    type: git
+    url: https://github.com/ros-misc-utilities/ffmpeg_image_transport_msgs.git
+    version: ${FFMPEG_IMAGE_TRANSPORT_MSGS_VERSION}
+
+  # Optional RMW (kept because you had it before)
+  rmw_cyclonedds:
+    type: git
+    url: https://github.com/ros2/rmw_cyclonedds.git
+    version: ${RMW_CYCLONEDDS_VERSION}

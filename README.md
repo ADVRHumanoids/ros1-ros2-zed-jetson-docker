@@ -4,6 +4,12 @@ This repository provides Docker containers for running ROS1 (Noetic) and ROS2 (H
 
 It's specifically configured for use with the ZED X Mini camera.
 
+An **experimental, unsupported** ROS2 Jazzy variant lives in [`ros2_jazzy/`](ros2_jazzy/README.md).
+Jazzy requires Ubuntu 24.04, which an Orin cannot run natively (JetPack 7 is Thor-only), so
+that container runs a 24.04 userspace on the unchanged JetPack 6 host with a Jammy-built ZED
+SDK — a combination Stereolabs do not support. `ros2_humble/` remains the working setup;
+read `ros2_jazzy/README.md` before using it.
+
 ## Prerequisites
 
 * NVIDIA Jetson Orin device
@@ -29,7 +35,7 @@ sudo XAUTHORITY=/run/user/$(id -u gdm)/gdm/Xauthority xhost +si:localuser:root
 
 ## Build and Run Containers
 
-Navigate to the specific ROS version directory (`ros1_noetic` or `ros2_humble`) containing the `docker-compose.yml` file you want to use.
+Navigate to the specific ROS version directory (`ros1_noetic`, `ros2_humble`, or `ros2_jazzy`) containing the `docker-compose.yml` file you want to use.
 
 ### ROS2 Humble Specifics
  
@@ -177,6 +183,6 @@ If you encounter persistent problems with your Buildx builder instance (`mybuild
 ---
 ## Notes
 
-* **Container Names:** The default container names are `zed-ros-noetic` for ROS1 and `zed_ros2_container` for ROS2. These are defined in the respective `docker-compose.yml` files.
+* **Container Names:** The default container names are `zed-ros-noetic` for ROS1, `zed_ros2_container` for ROS2 Humble, and `zed_ros2_jazzy_container` for the experimental ROS2 Jazzy variant. These are defined in the respective `docker-compose.yml` files.
 * **Volumes:** The compose files mount necessary `/dev` nodes and directories for device access and X11 forwarding. Additional volumes for ZED SDK settings or resources might be needed depending on your setup (refer to the Stereolabs Docker documentation).
 * **JetPack/L4T Version:** The ROS2 container is configured for L4T r36.4.0 (JetPack 6.0 DP). If you are using a different version, you might need to adjust the `L4T_VERSION` build argument in `ros2_humble/docker-compose.yml` and potentially the base image in the Dockerfile.
