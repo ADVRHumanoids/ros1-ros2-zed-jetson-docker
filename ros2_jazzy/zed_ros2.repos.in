@@ -9,6 +9,10 @@ repositories:
     type: git
     url: https://github.com/stereolabs/zed-ros2-interfaces.git
     version: ${ZED_MSGS_VERSION}
+  zed-ros2-description:
+    type: git
+    url: https://github.com/stereolabs/zed-ros2-description.git
+    version: ${ZED_DESCRIPTION_VERSION}
   nmea_msgs:
     type: git
     url: https://github.com/ros-drivers/nmea_msgs.git

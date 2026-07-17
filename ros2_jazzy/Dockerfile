@@ -16,7 +16,8 @@ ARG IMAGE_NAME=dustynv/ros:jazzy-desktop-${L4T_VERSION}-${CUDA_TAG}-${UBUNTU_REL
 
 FROM ${IMAGE_NAME}
 
-# zed-ros2-wrapper master requires ZED SDK >= 5.2.
+# Keep the wrapper pinned to the ZED SDK release. Using the moving `master` branch
+# made builds non-reproducible and pulled in new runtime dependencies without warning.
 ARG ZED_SDK_MAJOR=5
 ARG ZED_SDK_MINOR=4
 ARG ZED_SDK_PATCH=0
@@ -27,8 +28,9 @@ ARG L4T_PATCH=0
 # ROS2 distribution
 ARG ROS2_DIST=jazzy
 
-ARG ZED_WRAPPER_VERSION=master
+ARG ZED_WRAPPER_VERSION=v5.4.0
 ARG ZED_MSGS_VERSION=5.3.0
+ARG ZED_DESCRIPTION_VERSION=0.1.5
 
 # ZED ROS2 Wrapper dependencies, pinned to the versions released into Jazzy
 # (source of truth: https://github.com/ros/rosdistro/blob/master/jazzy/distribution.yaml)
@@ -132,6 +134,7 @@ RUN git clone --branch ${ZED_WRAPPER_VERSION} https://github.com/stereolabs/zed-
     wget https://github.com/ament/ament_lint/archive/refs/tags/${AMENT_LINT_VERSION}.tar.gz -O - | tar -xvz && mv ament_lint-${AMENT_LINT_VERSION} ament-lint && \
     wget https://github.com/cra-ros-pkg/robot_localization/archive/refs/tags/${ROBOT_LOCALIZATION_VERSION}.tar.gz -O - | tar -xvz && mv robot_localization-${ROBOT_LOCALIZATION_VERSION} robot-localization && \
     wget https://github.com/stereolabs/zed-ros2-interfaces/archive/refs/tags/${ZED_MSGS_VERSION}.tar.gz -O - | tar -xvz && mv zed-ros2-interfaces-${ZED_MSGS_VERSION} zed-ros2-interfaces && \
+    wget https://github.com/stereolabs/zed-ros2-description/archive/refs/tags/${ZED_DESCRIPTION_VERSION}.tar.gz -O - | tar -xvz && mv zed-ros2-description-${ZED_DESCRIPTION_VERSION} zed-ros2-description && \
     wget https://github.com/ros-drivers/nmea_msgs/archive/refs/tags/${NMEA_MSGS_VERSION}.tar.gz -O - | tar -xvz && mv nmea_msgs-${NMEA_MSGS_VERSION} nmea_msgs && \
     wget https://github.com/ros/angles/archive/refs/tags/${ANGLES_VERSION}.tar.gz -O - | tar -xvz && mv angles-${ANGLES_VERSION} angles && \
     wget https://github.com/ros-perception/point_cloud_transport/archive/refs/tags/${POINTCLOUD_TRANSPORT_VERSION}.tar.gz -O - | tar -xvz && mv point_cloud_transport-${POINTCLOUD_TRANSPORT_VERSION} point_cloud_transport && \
@@ -230,6 +233,14 @@ RUN bash -lc '\
       -DBUILD_TESTING=OFF \
       -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs \
       -DCMAKE_CXX_FLAGS="-Wl,--allow-shlib-undefined" \
+'
+
+# Fail the image build here, rather than later at camera launch, if the wrapper's
+# external URDF package was not installed into the workspace.
+RUN bash -lc '\
+  source /opt/ros/$ROS_DISTRO/install/setup.bash; \
+  source /root/ros2_ws/install/local_setup.bash; \
+  ros2 pkg prefix zed_description \
 '
 
 WORKDIR /root/ros2_ws

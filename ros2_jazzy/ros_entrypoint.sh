@@ -21,6 +21,11 @@ echo 'Local IPs:' $(hostname -I)
 echo "---"
 echo 'Available ZED packages:'
 ros2 pkg list | grep zed
+if ! ros2 pkg prefix zed_description >/dev/null 2>&1; then
+  echo 'ERROR: required package zed_description is missing from the ROS workspace.' >&2
+  echo 'Rebuild the image before launching the ZED wrapper.' >&2
+  exit 1
+fi
 echo "---------------------"
 echo 'To start a ZED camera node:'
 echo '  ros2 launch zed_wrapper zed_camera.launch.py camera_model:=zedxm'

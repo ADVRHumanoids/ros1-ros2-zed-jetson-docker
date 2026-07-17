@@ -70,10 +70,33 @@ sudo systemctl status zed_x_daemon    # expect: active (running)  -- ZED X Mini 
   a GMSL2 camera and the daemon owns it; the container only mounts its unit file.
 - If `nvidia` is not listed as a runtime, the NVIDIA Container Toolkit is not configured
   and nothing below will see the GPU.
+- If `docker info` fails with `permission denied` on `/var/run/docker.sock`, add the
+  current user to the Docker group, then completely disconnect and reconnect the SSH
+  session:
+
+  ```bash
+  sudo usermod -aG docker "$USER"
+  # log out, reconnect, then verify:
+  docker info
+  ```
+
+  Membership in the `docker` group is effectively root-level access. Avoid running
+  Compose with `sudo` when using SSH X11 forwarding: `sudo` can discard `DISPLAY` or use
+  root's `.Xauthority` instead of yours.
 
 ### 1. Allow the container to reach the X server
 
-Once per boot, on the host (this is the same command your `ros1_noetic` scripts use):
+When connected with `ssh -X`, keep the forwarded display assigned by SSH:
+
+```bash
+echo "$DISPLAY"                       # expect something like localhost:10.0
+```
+
+Do **not** replace it with `DISPLAY=:0`; start Compose without `sudo` from this same SSH
+session so the value and your `.Xauthority` are passed into the container.
+
+Only when working directly on the Jetson's physical desktop, use the local display setup
+(the same command your `ros1_noetic` scripts use):
 
 ```bash
 export DISPLAY=:0
@@ -112,10 +135,10 @@ docker compose up -d
 docker exec -it zed_ros2_jazzy_container bash
 ```
 
-The entrypoint prints a banner and runs `ros2 pkg list | grep zed`. **That banner is your
-first real check**: if it lists `zed_wrapper`, `zed_components` and `zed_msgs`, the ROS
-side of the migration built correctly. If the banner is missing them, the problem is the
-build, not the camera.
+The entrypoint prints a banner and validates the ZED package set. **That banner is your
+first real check**: it must list `zed_wrapper`, `zed_components`, `zed_msgs`, and
+`zed_description`. If `zed_description` is absent, the entrypoint exits with a rebuild
+instruction instead of letting the launch fail later.
 
 ### 4. Launch the camera
 
@@ -136,6 +159,26 @@ A non-zero, steady rate from `ros2 topic hz` is the only proof the camera opened
 that starts and publishes nothing means the SDK did not get the camera.
 
 ## If it breaks
+
+**`PackageNotFoundError: package 'zed_description' not found`** — ZED Wrapper 5.2.1 moved
+the URDFs into the separate `zed-ros2-description` repository. This Dockerfile now pins
+and builds that package from source. An image built before this fix must be rebuilt and
+the old container recreated:
+
+```bash
+docker compose build
+docker compose up -d --force-recreate
+docker exec -it zed_ros2_jazzy_container bash
+ros2 pkg prefix zed_description
+```
+
+The last command must print a path below `/root/ros2_ws/install/zed_description`. The
+secondary `InvalidFrontendLaunchFileError` in this case is generic; it does not mean that
+`zed_camera.launch.py` has a syntax error.
+
+**Docker commands fail with `/var/run/docker.sock: permission denied`** — follow the
+Docker-group procedure in step 0 and reconnect. Until then, prefixing commands with
+`sudo` is only a temporary workaround and can interfere with SSH X11 credentials.
 
 **Node starts but the camera never opens** — this is the failure this container is most
 exposed to, and it is *not* a ROS problem. It is the Jammy-built SDK meeting the Noble
@@ -227,8 +270,11 @@ every tag below was verified to resolve.
 | `ffmpeg_image_transport_msgs` | branch `humble` | **1.3.0** |
 | `geographic_info` | 1.0.6 | 1.0.6 (unchanged) |
 
-`zed-ros2-interfaces` goes 5.0.0 → **5.3.0** (its latest; the wrapper is at 5.4.0 —
+`zed-ros2-interfaces` goes 5.0.0 → **5.3.0** (the wrapper is pinned at 5.4.0 —
 upstream does not keep the two in lockstep).
+
+Starting with wrapper 5.2.1, URDFs live in the separate `zed_description` package. The
+Jazzy image therefore also builds `zed-ros2-description` **0.1.5** in the workspace.
 
 `zed_wrapper` gains a Jazzy-only hard dependency,
 `<exec_depend condition="$ROS_DISTRO >= jazzy">zstd_image_transport</exec_depend>`,
@@ -237,7 +283,7 @@ which is why `image_transport_plugins` must still be built (only the OpenCV-heav
 
 ### 5. ZED SDK 5.0.5 → 5.4.0, and a better URL
 
-`zed-ros2-wrapper` master **requires ZED SDK ≥ 5.2**. Worth flagging: `ros2_humble/`
+`zed-ros2-wrapper` 5.4.0 **requires ZED SDK ≥ 5.2**. Worth flagging: `ros2_humble/`
 pins SDK 5.0.5 while cloning the wrapper from an unpinned `master`, so that combination
 is *already* inconsistent with upstream's stated requirement and will drift further.
 
@@ -251,14 +297,16 @@ now: https://download.stereolabs.com/zedsdk/5.4.0/l4t36.4/jetsons
 This is the form Stereolabs use in their own Dockerfiles; it resolves to the current
 `.run` and survives CDN changes. It redirects, so the existence check now uses `curl -L -I`.
 
-`ZED_WRAPPER_VERSION` was added as a build arg (default `master`, i.e. today's behaviour).
-Pinning it to `v5.4.0` is recommended for reproducible builds.
+`ZED_WRAPPER_VERSION` is pinned to the official `v5.4.0` release for reproducible builds.
+`ZED_DESCRIPTION_VERSION` is independently pinned to `0.1.5` because Stereolabs version
+the description package separately.
 
 ## Sources
 
 - [Stereolabs: JetPack 7 / Ubuntu 24.04 not supported on Orin](https://community.stereolabs.com/t/zed-box-mini-and-ubuntu-24-04-support/11030)
 - [Stereolabs: Ubuntu 24.04 support depends on NVIDIA's L4T BSP](https://community.stereolabs.com/t/ubuntu-24-04-support/5965)
 - [zed-ros2-wrapper — supported distros and SDK requirement](https://github.com/stereolabs/zed-ros2-wrapper)
+- [zed-ros2-description — separate URDF package](https://github.com/stereolabs/zed-ros2-description)
 - [jetson-containers — `zed` package pairing the l4t36.4 SDK with jazzy](https://github.com/dusty-nv/jetson-containers/tree/master/packages/hw/zed)
 - [rosdistro — `jazzy/distribution.yaml`](https://github.com/ros/rosdistro/blob/master/jazzy/distribution.yaml)
 - [ROS signing key migration guide](https://discourse.openrobotics.org/t/ros-signing-key-migration-guide/43937)
